@@ -3,6 +3,7 @@
 - MoM%      = (Current - Prev) / Prev * 100        (Prev <= 0 이면 None)
 - 3M Avg    = Current 직전 baseline_months(=3)개월 평균 (Current 제외)
 - Momentum% = (Current - 3M Avg) / 3M Avg * 100   (평균 <= 0 이면 None)
+- Rises     = 최근 persistence_months 개 MoM 중 상승 횟수 (보조 지표)
 - Direction = threshold 기준 UP / STABLE / DOWN, 계산 불가면 UNKNOWN
 """
 from __future__ import annotations
@@ -76,6 +77,13 @@ def compute_topic_metric(
             notes.append("3개월 평균이 0 이하여서 Momentum 계산 불가")
         else:
             m.momentum_pct = round(mo, 2)
+
+    # 지속성: 최근 persistence_months 개 월간 변화 중 상승 횟수 (연속된 두 달이 모두 있는 구간만 관측)
+    obs = [(by_month[i][1], by_month[i - 1][1]) for i in range(cur_idx - cfg.persistence_months + 1, cur_idx + 1)
+           if i in by_month and i - 1 in by_month]
+    if obs:
+        m.rise_window = len(obs)
+        m.rises = sum(1 for cur, prv in obs if cur > prv)
 
     m.direction = classify(m.momentum_pct, cfg)
     m.note = "; ".join(notes) or None

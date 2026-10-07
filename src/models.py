@@ -93,6 +93,8 @@ class TopicMetric(BaseModel):
     momentum_pct: Optional[float] = None
     direction: Direction = Direction.UNKNOWN
     n_points: int = 0
+    rises: Optional[int] = None  # 최근 persistence_months 개 MoM 중 상승 횟수
+    rise_window: Optional[int] = None  # 위 판정에 쓴 MoM 관측 수 (연속 월만)
     note: Optional[str] = None  # 계산 불가 사유 등
 
 

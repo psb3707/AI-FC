@@ -21,6 +21,10 @@ class Topic(BaseModel):
     id: str
     display_name: str
     keywords: list[str]
+    caution: Optional[str] = None  # 검색어 의미 혼재 등 데이터 품질 경고 (있으면 UI 표시, 헤드라인 Signal 에서 제외)
+    check_point: Optional[str] = None  # 관심 상승 시 FC 가 먼저 확인할 영역 (제안이 아닌 확인 사항)
+    validation_question: Optional[str] = None  # Signal Validation 질문
+    deep_dive_question: Optional[str] = None  # Need Deep-Dive 질문 (고객이 관심을 표현한 경우)
 
     @field_validator("keywords")
     @classmethod
@@ -49,6 +53,7 @@ class TrendConfig(BaseModel):
     up_threshold_pct: float = 5.0
     down_threshold_pct: float = -5.0
     baseline_months: int = 3
+    persistence_months: int = 6  # '최근 N개월 중 상승 횟수' 보조 지표 구간
 
     @field_validator("baseline_months")
     @classmethod
@@ -120,7 +125,8 @@ def load_topics(path: Path | None = None) -> TopicsConfig:
         for tid, body in raw_topics.items():
             if not isinstance(body, dict):
                 raise ConfigError(f"topic '{tid}' 형식 오류")
-            topics.append(Topic(id=str(tid), display_name=body.get("display_name", ""), keywords=body.get("keywords", [])))
+            extra = {k: body[k] for k in ("caution", "check_point", "validation_question", "deep_dive_question") if body.get(k)}
+            topics.append(Topic(id=str(tid), display_name=body.get("display_name", ""), keywords=body.get("keywords", []), **extra))
         version = data.get("topics_version")
         if not version:
             raise ConfigError("topics.yaml: topics_version 이 필요합니다")

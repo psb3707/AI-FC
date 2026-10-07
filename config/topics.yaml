@@ -1,21 +1,40 @@
 # Topic 정의. keyword를 바꾸면 Trend의 정의가 바뀌므로 반드시 topics_version을 올린다.
 # 변경 이력:
 #   v1 (2026-10-07) 초기 예시 키워드
-# 주의: "건강보험"은 국민건강보험 관련 검색이 섞일 수 있음 (DATA_METHODOLOGY 참조)
+#   (2026-10-07) Keyword 는 변경하지 않음. 건강보험 Keyword 민감도 실험 결과 caution 만 추가 (DATA_METHODOLOGY §8)
+# caution: 데이터 품질 경고. 있으면 UI 에 표시하고 '이번 달 주목 Signal' 헤드라인에서 제외한다.
+# check_point / validation_question / deep_dive_question: 상담 질문 은행.
+#   - 상품 추천/필요성 단정 금지. 고객에게 확인할 열린 질문만 쓴다. (guardrails 로 검증됨)
 topics_version: v1
 topics:
   cancer:
     display_name: 암보험
     keywords: [암보험, 암진단비, 암보장]
+    check_point: 중대질병 보장에 대한 관심이나 우려가 있는지 먼저 확인해 보세요.
+    validation_question: 최근 암이나 중대질병 보장에 관심을 가지게 된 특별한 계기나 걱정이 있으신가요?
+    deep_dive_question: 치료비 자체와 치료로 인해 일을 쉬게 되는 소득 공백 중 어느 쪽을 더 걱정하시나요?
   health:
     display_name: 건강보험
     keywords: [건강보험, 종합건강보험]
+    caution: 검색어 의미 혼재 가능 — '건강보험'에 국민건강보험(공적보험) 검색이 섞여 있어 민영 건강보험 관심으로 읽을 수 없습니다.
+    check_point: 건강 관련 보장 전반에 대한 관심이 있는지 먼저 확인해 보세요.
+    validation_question: 요즘 건강이나 의료비와 관련해 신경 쓰이는 부분이 있으신가요?
+    deep_dive_question: 건강 관련해서 이미 준비해 두신 부분과 부족하다고 느끼시는 부분은 각각 무엇인가요?
   indemnity:
     display_name: 실손보험
     keywords: [실손보험, 실비보험]
+    check_point: 의료비 부담이나 기존 실손 보장 상태에 대한 관심이 있는지 먼저 확인해 보세요.
+    validation_question: 최근 병원비나 의료비와 관련해 신경 쓰이신 일이 있으셨나요?
+    deep_dive_question: 현재 가지고 계신 실손 보장에서 어떤 부분이 궁금하거나 불편하셨나요?
   whole_life:
     display_name: 종신보험
     keywords: [종신보험]
+    check_point: 가족 보호나 장기적인 재정 계획에 대한 관심이 있는지 먼저 확인해 보세요.
+    validation_question: 요즘 가족의 생활 안정이나 장기 재정 계획에 대해 생각해 보신 적이 있으신가요?
+    deep_dive_question: 만약의 상황에서 가족이 가장 먼저 필요로 할 것은 무엇이라고 생각하시나요?
   care:
     display_name: 간병보험
     keywords: [간병보험, 간병인보험]
+    check_point: 가족 돌봄이나 노후 간병에 대한 관심이나 걱정이 있는지 먼저 확인해 보세요.
+    validation_question: 최근 부모님이나 주변 분의 돌봄·간병과 관련해 고민하신 일이 있으신가요?
+    deep_dive_question: 돌봄이 필요한 상황이 생긴다면 비용과 시간 중 어느 쪽이 더 걱정되시나요?

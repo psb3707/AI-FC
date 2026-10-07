@@ -7,6 +7,10 @@ FC 가 상담 전에 고객의 **연령·성별 집단**에서 최근 어떤 보
 ## Problem Statement
 FC 는 "이 연령대는 요즘 무엇에 관심이 있나?"를 개인 경험·동료 의견·기사에 의존해 판단한다. 이 도구는 상품 추천이 아니라 **관심도 변화를 데이터로 보여주고, 어떤 니즈부터 확인할지** 정리해 준다.
 
+## 화면 구성 (Action-First)
+Segment 선택 → **이번 달 상담 준비**(주목 Signal · FC Check Point · 상담 시작 질문) → Topic별 관심 변화 카드(방향 우선, Raw 지수는 상세 지표로) → 3M 평균과 함께 보는 추이 차트 → AI 해석(무엇이 변했나 / 어떻게 해석하나 / 무엇을 물어볼까) → SFA 역할 구분 · 방법론.
+시장 Signal → 니즈 **가설** → FC 질문 → 고객 검증 중 앞의 두 단계만 지원하며, 니즈 판단·상품 추천은 하지 않는다. 상담 질문은 `config/topics.yaml` 의 Topic별 질문 은행에서 가져온다. 평가·검증 기록: [docs/PRODUCT_REVIEW.md](docs/PRODUCT_REVIEW.md).
+
 ## Architecture
 ```mermaid
 flowchart LR
@@ -33,6 +37,7 @@ copy .env.example .env
 
 ## API Key Setup
 `.env` (Git 제외)에 입력. 코드/설정 파일에 Key 를 넣지 않는다.
+- `NAVER_API_PROVIDER` — `developers`(기본, developers.naver.com 키) 또는 `ncp`(네이버 클라우드 API HUB 키). 맞지 않으면 401.
 - `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` — Naver Developers 에서 Application 등록 시 **"데이터랩 (검색어트렌드)"** API 선택 (미선택 시 403). 일 1,000회 제한.
 - `OPENAI_API_KEY` — **선택**. 없으면 규칙 기반 요약을 사용하며 핵심 기능은 동일하게 동작.
 
@@ -47,7 +52,7 @@ copy .env.example .env
 
 ## How to Test
 ```powershell
-.venv\Scripts\python -m pytest                 # Unit + Fixture (외부 API 호출 없음)
+.venv\Scripts\python -m pytest                 # Unit + Fixture + Streamlit AppTest(mock) (외부 API 호출 없음)
 .venv\Scripts\python -m pytest -m integration  # 실제 Naver API 1건 (Key 없으면 skip)
 ```
 
@@ -64,7 +69,7 @@ copy .env.example .env
 절대 검색량·판매량·개인 수요가 아님 / Keyword 선택에 따라 결과 변동 / ratio 는 Request 마다 최댓값=100 으로 재정규화되므로 **다른 Request(연령·성별·기간) 간 값 비교 금지** / "건강보험"은 국민건강보험 검색이 섞일 수 있음.
 
 ## Project Status
-실제 Naver API 호출은 아직 검증되지 않았다 (Key 필요). 연결 후 DATA_METHODOLOGY §7 Smoke Test 를 수행할 것.
+실제 Naver API 연결과 Smoke Test 1~3 은 2026-10-07 에 수행했다 (DATA_METHODOLOGY §7). "건강보험" Keyword 는 의미 혼재로 Direction 이 불안정해 헤드라인 Signal 에서 제외한다 (§8). OpenAI 경로는 실호출 검증 전이다.
 
 ## Future Roadmap
 [ROADMAP.md](ROADMAP.md) 참조.

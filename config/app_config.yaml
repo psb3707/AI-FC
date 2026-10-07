@@ -2,6 +2,7 @@ trend:
   up_threshold_pct: 5.0      # Momentum >= +5% -> UP
   down_threshold_pct: -5.0   # Momentum <= -5% -> DOWN
   baseline_months: 3         # 3M Average 에 쓰는 직전 개월 수 (Current 제외)
+  persistence_months: 6      # 상승 지속성(최근 N개월 중 상승 횟수) 보조 지표 구간
 
 collector:
   timeout_seconds: 10
