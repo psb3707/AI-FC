@@ -28,18 +28,22 @@ def window(months: int, today: Optional[date] = None) -> tuple[date, date]:
 class ReportService:
     def __init__(self, mode: str, topics: TopicsConfig, cfg: AppConfig, repo: Repository, collector: Optional[NaverDataLabCollector] = None):
         self.mode, self.topics, self.cfg, self.repo, self.collector = mode, topics, cfg, repo, collector
+        self.collector_error: Optional[str] = None  # from_env 에서 Collector 생성 실패 사유
 
     @classmethod
     def from_env(cls, mode: str, topics: TopicsConfig, cfg: AppConfig, repo: Repository) -> "ReportService":
-        collector = None
+        collector, error = None, None
         if mode == "real":
             try:
                 collector = NaverDataLabCollector(
-                    os.getenv("NAVER_CLIENT_ID", ""), os.getenv("NAVER_CLIENT_SECRET", ""), cfg.collector
+                    os.getenv("NAVER_CLIENT_ID", ""), os.getenv("NAVER_CLIENT_SECRET", ""), cfg.collector,
+                    provider=os.getenv("NAVER_API_PROVIDER", "developers").strip().lower() or "developers",
                 )
-            except CollectorError:
-                collector = None  # get_report 에서 친화적 오류로 안내
-        return cls(mode, topics, cfg, repo, collector)
+            except CollectorError as e:
+                error = e.user_message  # get_report 에서 친화적 오류로 안내
+        svc = cls(mode, topics, cfg, repo, collector)
+        svc.collector_error = error
+        return svc
 
     def get_report(self, segment: Segment, months: int, today: Optional[date] = None) -> SegmentReport:
         start, end = window(months, today)
@@ -56,12 +60,13 @@ class ReportService:
                 response = build_mock_response(meta)
             else:
                 if self.collector is None:
-                    report.error = "실데이터 모드입니다. .env 에 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 을 설정하거나 APP_MODE=mock 으로 실행해 주세요."
+                    report.error = self.collector_error or "실데이터 모드입니다. .env 에 NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 을 설정하거나 APP_MODE=mock 으로 실행해 주세요."
                     return report
                 probe = RequestMeta(
                     requested_at=datetime.now(timezone.utc), start_date=start, end_date=end,
                     age_codes=[segment.age_code], gender=gender_param, topics_version=self.topics.topics_version,
                     topic_groups={g["groupName"]: g["keywords"] for g in self.topics.keyword_groups},
+                    source=self.collector.source,  # 캐시 키 일치 (fetch 시 저장되는 meta.source 와 동일해야 함)
                 )
                 cached = self.repo.get_cache(probe, self.cfg.cache.ttl_hours)
                 if cached:

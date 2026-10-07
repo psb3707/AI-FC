@@ -17,14 +17,42 @@ from src.models import RequestMeta
 
 log = logging.getLogger(__name__)
 
-ENDPOINT = "https://openapi.naver.com/v1/datalab/search"
+ENDPOINT = "https://openapi.naver.com/v1/datalab/search"  # developers (하위호환 상수)
 MIN_START_DATE = date(2016, 1, 1)  # 공식 조회 가능 최초 일자
 
-_USER_MESSAGES = {
+# 두 가지 발급 경로. 요청 Body/응답 형식은 동일하고 endpoint 와 인증 헤더만 다르다.
+#  - developers: developers.naver.com 에서 발급 (Client ID 20자 / Secret 10자 형태)
+#  - ncp:        네이버 클라우드 플랫폼 NAVER API HUB 에서 발급 (Client ID 10자 / Secret 40자 형태)
+PROVIDERS: dict[str, dict[str, str]] = {
+    "developers": {
+        "endpoint": "https://openapi.naver.com/v1/datalab/search",
+        "id_header": "X-Naver-Client-Id",
+        "secret_header": "X-Naver-Client-Secret",
+        "source": "NAVER_DATALAB_SEARCH",
+        "label": "네이버 개발자센터",
+    },
+    "ncp": {
+        "endpoint": "https://naverapihub.apigw.ntruss.com/search-trend/v1/search",
+        "id_header": "X-NCP-APIGW-API-KEY-ID",
+        "secret_header": "X-NCP-APIGW-API-KEY",
+        "source": "NAVER_API_HUB_SEARCH_TREND",
+        "label": "NCP NAVER API HUB",
+    },
+}
+
+_COMMON_MESSAGES = {
     400: "요청 형식이 올바르지 않습니다. (조회 조건 또는 Keyword 설정을 확인해 주세요)",
-    401: "네이버 API 인증에 실패했습니다. NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 을 확인해 주세요.",
-    403: "네이버 API 권한이 없습니다. 개발자센터 Application 에 '데이터랩 (검색어트렌드)' API 가 추가되어 있는지 확인해 주세요.",
-    429: "네이버 API 호출 한도(일 1,000회)를 초과했거나 요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.",
+    429: "네이버 API 일일 호출 한도를 초과했거나 요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.",
+}
+_PROVIDER_MESSAGES = {
+    "developers": {
+        401: "네이버 API 인증에 실패했습니다. NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 과 NAVER_API_PROVIDER 를 확인해 주세요. (NCP API HUB 키라면 NAVER_API_PROVIDER=ncp)",
+        403: "네이버 API 권한이 없습니다. 개발자센터 Application 에 '데이터랩 (검색어트렌드)' API 가 추가되어 있는지 확인해 주세요.",
+    },
+    "ncp": {
+        401: "NAVER API HUB 인증에 실패했습니다. Client ID/Secret 이 맞는지, 개발자센터 키라면 NAVER_API_PROVIDER=developers 인지 확인해 주세요.",
+        403: "NAVER API HUB 요청이 거부되었습니다. HTTPS 요청인지, 애플리케이션에 '검색어 트렌드' API 가 선택되어 있는지 확인해 주세요.",
+    },
 }
 
 
@@ -52,18 +80,28 @@ class NaverDataLabCollector:
         config: Optional[CollectorConfig] = None,
         client: Optional[httpx.Client] = None,
         sleep=time.sleep,
+        provider: str = "developers",
     ):
+        if provider not in PROVIDERS:
+            raise CollectorError(f"NAVER_API_PROVIDER 는 {' / '.join(PROVIDERS)} 중 하나여야 합니다. (현재: {provider})")
         if not client_id or not client_secret:
             raise CollectorError("NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 이 설정되지 않았습니다. .env 를 확인해 주세요.")
+        self.provider = provider
+        self._spec = PROVIDERS[provider]
         self._cfg = config or CollectorConfig()
         self._headers = {
-            "X-Naver-Client-Id": client_id,
-            "X-Naver-Client-Secret": client_secret,
+            self._spec["id_header"]: client_id,
+            self._spec["secret_header"]: client_secret,
             "Content-Type": "application/json",
         }
         self._client = client or httpx.Client(timeout=self._cfg.timeout_seconds)
         self._sleep = sleep
         self._last_call = 0.0
+
+    @property
+    def source(self) -> str:
+        """RequestMeta.source 에 기록되는 값. 캐시 키에 포함되어 provider 가 다르면 캐시를 공유하지 않는다."""
+        return self._spec["source"]
 
     @staticmethod
     def build_body(
@@ -125,13 +163,14 @@ class NaverDataLabCollector:
             device=device,
             topics_version=topics_version,
             topic_groups={g["groupName"]: list(g["keywords"]) for g in keyword_groups},
+            source=self.source,
         )
         attempts = max(1, self._cfg.max_retries)
         last_err: Optional[CollectorError] = None
         for attempt in range(1, attempts + 1):
             self._throttle()
             try:
-                resp = self._client.post(ENDPOINT, headers=self._headers, json=body)
+                resp = self._client.post(self._spec["endpoint"], headers=self._headers, json=body)
             except httpx.TimeoutException as e:
                 last_err = CollectorError("네이버 API 응답 시간이 초과되었습니다.", detail=str(e))
                 log.warning("naver timeout (attempt %s/%s)", attempt, attempts)
@@ -141,7 +180,8 @@ class NaverDataLabCollector:
             else:
                 if resp.status_code == 200:
                     return RawResult(self._parse_json(resp), meta)
-                msg = _USER_MESSAGES.get(resp.status_code, f"네이버 API 오류가 발생했습니다. (HTTP {resp.status_code})")
+                msg = (_PROVIDER_MESSAGES[self.provider].get(resp.status_code) or _COMMON_MESSAGES.get(resp.status_code)
+                       or f"네이버 API 오류가 발생했습니다. (HTTP {resp.status_code})")
                 last_err = CollectorError(msg, resp.status_code, resp.text[:300])
                 log.warning("naver http %s (attempt %s/%s)", resp.status_code, attempt, attempts)
                 if resp.status_code < 500 and resp.status_code != 429:

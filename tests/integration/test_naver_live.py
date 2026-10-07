@@ -22,7 +22,10 @@ pytestmark = [
 def test_live_age4_male_cancer_3m(tmp_path, topics):
     start, end = window(3)
     groups = [g for g in topics.keyword_groups if g["groupName"] == "암보험"]
-    col = NaverDataLabCollector(os.environ["NAVER_CLIENT_ID"], os.environ["NAVER_CLIENT_SECRET"])
+    col = NaverDataLabCollector(
+        os.environ["NAVER_CLIENT_ID"], os.environ["NAVER_CLIENT_SECRET"],
+        provider=os.getenv("NAVER_API_PROVIDER", "developers").strip().lower() or "developers",
+    )
     raw = col.fetch_trends(start, end, "month", groups, age_code="4", gender="m", topics_version=topics.topics_version)
 
     recs = normalize(raw.response, topics, "4", "male")
