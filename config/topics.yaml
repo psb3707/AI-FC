@@ -1,0 +1,21 @@
+# Topic 정의. keyword를 바꾸면 Trend의 정의가 바뀌므로 반드시 topics_version을 올린다.
+# 변경 이력:
+#   v1 (2026-10-07) 초기 예시 키워드
+# 주의: "건강보험"은 국민건강보험 관련 검색이 섞일 수 있음 (DATA_METHODOLOGY 참조)
+topics_version: v1
+topics:
+  cancer:
+    display_name: 암보험
+    keywords: [암보험, 암진단비, 암보장]
+  health:
+    display_name: 건강보험
+    keywords: [건강보험, 종합건강보험]
+  indemnity:
+    display_name: 실손보험
+    keywords: [실손보험, 실비보험]
+  whole_life:
+    display_name: 종신보험
+    keywords: [종신보험]
+  care:
+    display_name: 간병보험
+    keywords: [간병보험, 간병인보험]

@@ -1,0 +1,26 @@
+trend:
+  up_threshold_pct: 5.0      # Momentum >= +5% -> UP
+  down_threshold_pct: -5.0   # Momentum <= -5% -> DOWN
+  baseline_months: 3         # 3M Average 에 쓰는 직전 개월 수 (Current 제외)
+
+collector:
+  timeout_seconds: 10
+  max_retries: 3             # 총 시도 횟수. 무한 재시도 금지
+  backoff_seconds: 1.0
+  min_interval_seconds: 0.2  # 호출 간 최소 간격 (rate limit 배려)
+
+cache:
+  ttl_hours: 24              # 같은 Segment/기간 요청은 TTL 내 재호출하지 않음
+
+periods:                     # UI Period 선택지 (개월). ratio 척도는 윈도우마다 달라짐
+  options: [6, 12, 24]
+  default: 12
+
+defaults:
+  age_code: "4"              # 25~29세
+  gender: male
+
+ai:
+  enabled: true              # OPENAI_API_KEY 가 있을 때만 LLM 사용. 없으면 규칙 기반 Brief
+  model: gpt-4o-mini
+  timeout_seconds: 30

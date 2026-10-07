@@ -1,0 +1,13 @@
+tasks:
+  - {id: 1, name: Repository 분석/초기화, status: done}
+  - {id: 2, name: PROJECT_SPEC / ROADMAP / tasks, status: done}
+  - {id: 3, name: API Research (사용자 제공 공식 문서 요약 기준), status: done}
+  - {id: 4, name: Data Model (Raw/Normalized/Metric), status: done}
+  - {id: 5, name: Collector, status: done}
+  - {id: 6, name: Trend Engine, status: done}
+  - {id: 7, name: Dashboard, status: done}
+  - {id: 8, name: AI Insight, status: done}
+  - {id: 9, name: Automated Tests, status: done}
+  - {id: 10, name: Manual Acceptance, status: done}
+  - {id: 11, name: Documentation, status: done}
+  - {id: 12, name: 실제 Naver API Smoke Test 1-3, status: blocked, reason: API Key 필요}
